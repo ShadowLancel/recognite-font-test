@@ -1,0 +1,15 @@
+0: Aguante-Regular.otf
+1: AlumniSansCollegiateOne-Italic.ttf
+2: BrassMono-Regular.ttf
+3: GaneshaType-Regular.ttf
+4: GhastlyPanicCyr.otf
+5: Realest-Extended.otf
+6: TanaUncialSP.otf
+7: AlumniSansCollegiateOne-Regular.ttf
+8: ambidexter_regular.otf
+9: ArefRuqaaInk-Bold.ttf
+10: ArefRuqaaInk-Regular.ttf
+11: better-vcr-5.2.ttf
+12: BrassMono-Bold.ttf
+13: BrassMono-BoldItalic.ttf
+14: BrassMono-Italic.ttf
