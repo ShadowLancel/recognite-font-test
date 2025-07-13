@@ -1,11 +1,14 @@
-#coding=utf-8
-import torch
+п»їimport torch
 import torch.nn as nn
 import torch.optim as optim
-from torchvision import datasets, models, transforms
+from torchvision import datasets, transforms
+from torchvision.models import resnet50, ResNet50_Weights
 from torch.utils.data import DataLoader
 import os
 import argparse
+from font_model import FontClassifier
+from tqdm import tqdm
+from sklearn.metrics import classification_report
 
 def load_images(path):
     transform = transforms.Compose([
@@ -18,26 +21,13 @@ def load_images(path):
     return loader
 
 def train_model(num_classes, path_train_imgs, path_test_imgs, num_epochs, save_folder):
-    # Загрузка данных
+    # Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С…
     train_loader = load_images(path_train_imgs)
     test_loader = load_images(path_test_imgs)
 
-    # Создание модели
-    class FontClassifier(nn.Module):
-        def __init__(self, num_classes):
-            super(FontClassifier, self).__init__()
-            self.feature_extractor = models.resnet50(pretrained=True)
-            self.fc = nn.Linear(1000, num_classes)
-
-        def forward(self, x):
-            features = self.feature_extractor(x)
-            features = features.view(features.size(0), -1)
-            output = self.fc(features)
-            return output
-
     model = FontClassifier(num_classes)
 
-    # Обучение модели
+    # РћР±СѓС‡РµРЅРёРµ РјРѕРґРµР»Рё
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = model.to(device)
 
@@ -46,7 +36,8 @@ def train_model(num_classes, path_train_imgs, path_test_imgs, num_epochs, save_f
 
     for epoch in range(num_epochs):
         running_loss = 0.0
-        for inputs, labels in train_loader:
+	model.train()
+        for inputs, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             inputs = inputs.to(device)
             labels = labels.to(device)
             
@@ -61,21 +52,21 @@ def train_model(num_classes, path_train_imgs, path_test_imgs, num_epochs, save_f
 
         print(f"Epoch {epoch+1}/{num_epochs} - Loss: {running_loss / len(train_loader)}")
 
-    # Cохранение модели
+    # CРѕС…СЂР°РЅРµРЅРёРµ РјРѕРґРµР»Рё
     path_to_save = os.path.join(save_folder, 'model_demo.pth')
 
-    # Проверка существования пути и создание директории, если не существует
+    # РџСЂРѕРІРµСЂРєР° СЃСѓС‰РµСЃС‚РІРѕРІР°РЅРёСЏ РїСѓС‚Рё Рё СЃРѕР·РґР°РЅРёРµ РґРёСЂРµРєС‚РѕСЂРёРё, РµСЃР»Рё РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
 
     torch.save(model.state_dict(), path_to_save)
     print(f"Model saved successfully at {path_to_save}")
 
-    # Тестирование модели
+    # РўРµСЃС‚РёСЂРѕРІР°РЅРёРµ РјРѕРґРµР»Рё
     model.eval()
 
-    correct = 0
-    total = 0
+    all_preds = []
+    all_labels = []
 
     with torch.no_grad():
         for inputs, labels in test_loader:
@@ -85,11 +76,11 @@ def train_model(num_classes, path_train_imgs, path_test_imgs, num_epochs, save_f
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
 
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            all_preds.extend(predicted.cpu().numpy())
+            all_labels.extend(labels.cpu().numpy())
 
-    accuracy = 100 * correct / total
-    print(f"Test Accuracy: {accuracy:.2f}%")
+    print(classification_report(all_labels, all_preds, digits=4))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Font Recognition Model")

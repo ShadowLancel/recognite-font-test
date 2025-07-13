@@ -1,33 +1,22 @@
-#coding=utf-8
-import torch
+п»їimport torch
 import torch.nn as nn
-from torchvision import transforms, models
+from torchvision import transforms
+from torchvision.models import resnet50, ResNet50_Weights
 from PIL import Image
 import argparse
+from font_model import FontClassifier
 
-# Использование GPU при наличии такой возможности
+# РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ GPU РїСЂРё РЅР°Р»РёС‡РёРё С‚Р°РєРѕР№ РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-class FontClassifier(nn.Module):
-    def __init__(self):
-        super(FontClassifier, self).__init__()
-        self.feature_extractor = models.resnet50(pretrained=True)
-        self.fc = nn.Linear(1000, 15)
-
-    def forward(self, x):
-        features = self.feature_extractor(x)
-        features = features.view(features.size(0), -1)
-        output = self.fc(features)
-        return output
-
 def predict_font(model_path, class_names_path, image_path):
-    # Загрузка модели
+    # Р—Р°РіСЂСѓР·РєР° РјРѕРґРµР»Рё
     model = FontClassifier()
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path, weights_only=True))
     model = model.to(device)
     model.eval()
 
-    # Загрузка словаря из текстового файла
+    # Р—Р°РіСЂСѓР·РєР° СЃР»РѕРІР°СЂСЏ РёР· С‚РµРєСЃС‚РѕРІРѕРіРѕ С„Р°Р№Р»Р°
     class_names = {}
     with open(class_names_path, 'r') as file:
         for line in file:
@@ -36,7 +25,7 @@ def predict_font(model_path, class_names_path, image_path):
                 class_number, font_name = map(str.strip, line.split(':'))
                 class_names[int(class_number)] = font_name
 
-    # Загрузка изображения для предсказания
+    # Р—Р°РіСЂСѓР·РєР° РёР·РѕР±СЂР°Р¶РµРЅРёСЏ РґР»СЏ РїСЂРµРґСЃРєР°Р·Р°РЅРёСЏ
     transform = transforms.Compose([
         transforms.Resize((100, 100)),
         transforms.ToTensor(),
@@ -45,7 +34,7 @@ def predict_font(model_path, class_names_path, image_path):
     image = Image.open(image_path).convert('RGB')
     image = transform(image).unsqueeze(0).to(device)
 
-    # Получение предсказания
+    # РџРѕР»СѓС‡РµРЅРёРµ РїСЂРµРґСЃРєР°Р·Р°РЅРёСЏ
     with torch.no_grad():
         output = model(image)
 
@@ -53,7 +42,7 @@ def predict_font(model_path, class_names_path, image_path):
     predicted_class = torch.argmax(predicted_probabilities).item()
     predicted_probability = predicted_probabilities[predicted_class].item()
 
-    # Вывод результатов
+    # Р’С‹РІРѕРґ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ
     print(f"Predicted Class: {predicted_class}")
     print(f"Predicted Font: {class_names.get(predicted_class, 'Unknown')}")
     print(f"Probability: {predicted_probability*100}%")
